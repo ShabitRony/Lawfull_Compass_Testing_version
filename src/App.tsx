@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, LoaderCircle, LogIn, RotateCcw, UserRound } from 'lucide-react'
+import { AlertCircle, LoaderCircle, LogIn, UserRound } from 'lucide-react'
 import { AuthDialog, type AuthMode, type AuthPayload } from './components/AuthDialog'
 import { Brand } from './components/Brand'
 import { CitationDrawer } from './components/CitationDrawer'
@@ -38,7 +38,6 @@ export default function App() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [conversationLoading, setConversationLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [startupError, setStartupError] = useState('')
   const [notice, setNotice] = useState('')
   const [authOpen, setAuthOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -68,7 +67,6 @@ export default function App() {
 
   async function initialize() {
     setInitializing(true)
-    setStartupError('')
     try {
       if (session.access()) {
         try {
@@ -83,7 +81,7 @@ export default function App() {
       }
       await loadHistory()
     } catch (error) {
-      setStartupError(errorMessage(error))
+      setNotice(`${errorMessage(error)} The interface remains available, but answers and account features require the API service.`)
     } finally {
       setInitializing(false)
     }
@@ -141,7 +139,7 @@ export default function App() {
         : entry))
       void loadHistory()
     } catch (error) {
-      setEntries((current) => current.filter((entry) => entry.id !== pendingId))
+      setEntries((current) => current.filter((entry) => entry.id !== pendingId && entry.id !== userEntry.id))
       setQuestion(text)
       setNotice(errorMessage(error))
     } finally {
@@ -184,7 +182,7 @@ export default function App() {
       await establishAnonymous()
       await loadHistory()
     } catch (error) {
-      setStartupError(errorMessage(error))
+      setNotice(`${errorMessage(error)} The interface remains available, but answers and account features require the API service.`)
     } finally {
       setInitializing(false)
     }
@@ -197,18 +195,6 @@ export default function App() {
 
   if (initializing) {
     return <main className="startup"><Brand /><LoaderCircle className="spin" size={26} /><p>Preparing your private legal workspace…</p></main>
-  }
-
-  if (startupError) {
-    return (
-      <main className="startup startup-error">
-        <Brand />
-        <AlertCircle size={30} />
-        <h1>We couldn’t reach Lawful Compass</h1>
-        <p>{startupError}</p>
-        <button className="primary-button" onClick={() => void initialize()}><RotateCcw size={17} /> Try again</button>
-      </main>
-    )
   }
 
   return (
