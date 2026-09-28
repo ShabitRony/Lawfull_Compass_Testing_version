@@ -80,8 +80,9 @@ export default function App() {
         await establishAnonymous()
       }
       await loadHistory()
-    } catch (error) {
-      setNotice(`${errorMessage(error)} The interface remains available, but answers and account features require the API service.`)
+    } catch {
+      setUser(null)
+      setConversations([])
     } finally {
       setInitializing(false)
     }
