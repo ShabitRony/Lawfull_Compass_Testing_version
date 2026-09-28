@@ -325,9 +325,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .source-card { width: 100%; padding: 12px; display: grid; grid-template-columns: 27px 1fr 20px; align-items: center; gap: 10px; text-align: left; background: white; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
 .source-card:hover { border-color: #91aaa2; }
 .source-number { width: 24px; height: 24px; display: grid; place-items: center; color: white; background: var(--forest); border-radius: 50%; font-size: 10px; }
-.source-card strong, .source-card small { display: block; }
+.source-card strong, .source-card small, .source-card-snippet { display: block; }
 .source-card strong { font-size: 12px; }
 .source-card small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.source-card-snippet {
+  max-width: 72ch;
+  margin-top: 9px;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #53615c;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
 .source-card > svg { transform: rotate(45deg); }
 
 /* Composer */
