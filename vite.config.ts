@@ -80,7 +80,9 @@ function localApi() {
               refusal_reason: 'no_authoritative_source',
               disclaimer: 'The local development server has no legislation corpus. Connect the Lawful Compass API for source-backed answers.',
             }
-            const conversation = conversations.get(id) || { id, title: question.slice(0, 80), status: 'refused', last_activity_at: now, messages: [] }
+            const conversation: DevConversation = conversations.get(id) || {
+              id, title: question.slice(0, 80), status: 'refused', last_activity_at: now, messages: [],
+            }
             conversation.last_activity_at = now
             conversation.status = 'refused'
             conversation.messages.push(
