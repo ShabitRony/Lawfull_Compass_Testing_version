@@ -52,7 +52,11 @@ function Sources({ citations, onCitation }: { citations: Citation[]; onCitation:
         {citations.map((citation, index) => (
           <button className="source-card" key={citation.node_id} onClick={() => onCitation(citation)}>
             <span className="source-number">{index + 1}</span>
-            <span><strong>{citation.citation}</strong><small>{citation.document_title} · {citation.jurisdiction}</small></span>
+            <span>
+              <strong>{citation.citation}</strong>
+              <small>{citation.document_title} · {citation.jurisdiction}</small>
+              <span className="source-card-snippet">{citation.snippet}</span>
+            </span>
             <ArrowUp size={16} />
           </button>
         ))}
