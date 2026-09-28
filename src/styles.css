@@ -30,6 +30,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 
 .app-shell { min-height: 100vh; background: var(--paper); }
 .workspace {
+  min-width: 0;
   min-height: 100vh;
   margin-left: 292px;
   display: grid;
@@ -213,7 +214,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .account-button:hover { background: var(--forest-light); }
 
 /* Main welcome and conversation */
-.content-scroll { min-height: 0; overflow-y: auto; padding: 36px 32px 24px; }
+.content-scroll { min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 36px 32px 24px; }
 .content-scroll > * { width: min(850px, 100%); margin-left: auto; margin-right: auto; }
 .empty-content { display: flex; flex-direction: column; }
 .empty-content .welcome { margin: auto; }
@@ -393,31 +394,31 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
 .startup { min-height: 100vh; flex-direction: column; background: var(--paper); }
 
 @media (max-width: 900px) {
-  body { overflow: auto; }
+  body { overflow-y: auto; overflow-x: hidden; }
   .workspace { margin-left: 0; grid-template-rows: 64px minmax(calc(100vh - 190px), 1fr) auto; }
   .sidebar { width: min(292px, 86vw); transform: translateX(-100%); transition: transform 0.22s ease; }
   .sidebar.sidebar-open { transform: translateX(0); }
   .sidebar-close { display: inline-grid; }
   .sidebar-scrim { position: fixed; inset: 0; z-index: 19; display: block; background: rgba(10,25,21,0.45); border: 0; }
-  .topbar { padding: 0 17px; }
+  .topbar { min-width: 0; padding: 0 17px; }
   .topbar-left { display: flex; align-items: center; gap: 8px; }
   .mobile-brand { display: block; }
   .mobile-brand .brand-mark { width: 31px; height: 31px; }
   .mobile-brand .brand { font-size: 14px; }
   .service-state { display: none; }
-  .content-scroll { padding: 26px 18px 18px; }
-  .composer-wrap { padding: 0 16px 14px; }
+  .content-scroll { width: 100%; padding: 26px 18px 18px; }
+  .composer-wrap { min-width: 0; width: 100%; padding: 0 16px 14px; }
 }
 
 @media (max-width: 640px) {
   .account-button { font-size: 0; gap: 5px; }
   .account-button svg { width: 18px; height: 18px; }
-  .welcome { padding: 15px 0 8px; }
+  .welcome { min-width: 0; width: 100%; padding: 15px 0 8px; overflow: hidden; }
   .welcome-emblem { width: 54px; height: 54px; margin-bottom: 16px; }
-  .welcome h1 { font-size: 42px; }
+  .welcome h1 { max-width: 100%; font-size: 36px; line-height: 1; }
   .welcome-copy { font-size: 12px; }
-  .starter-grid { margin-top: 24px; grid-template-columns: 1fr; gap: 8px; }
-  .starter-grid button { min-height: 82px; }
+  .starter-grid { min-width: 0; margin-top: 24px; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .starter-grid button { min-width: 0; min-height: 82px; }
   .trust-line { align-items: flex-start; text-align: left; line-height: 1.45; }
   .user-message { max-width: 88%; }
   .assistant-row { grid-template-columns: 29px 1fr; gap: 9px; }
