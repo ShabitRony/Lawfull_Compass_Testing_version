@@ -28,3 +28,5 @@ export const session = {
     localStorage.removeItem(RESUME_KEY)
   },
 }
+
+if (session.access() === 'local-development-token') session.clearAll()
