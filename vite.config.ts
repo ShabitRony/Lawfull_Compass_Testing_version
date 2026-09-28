@@ -23,6 +23,13 @@ interface DevConversation {
 const conversations = new Map<string, DevConversation>()
 const devUser = { id: randomUUID(), username: 'guest-local', kind: 'anonymous' }
 
+function tokenPair() {
+  return {
+    access_token: 'local-development-token', refresh_token: 'local-development-refresh', token_type: 'bearer',
+    access_expires_in: 86400, refresh_expires_in: 604800,
+  }
+}
+
 function send(response: ServerResponse, status: number, data: unknown, message = 'Operation completed successfully.') {
   response.statusCode = status
   response.setHeader('Content-Type', 'application/json')
@@ -53,14 +60,44 @@ function localApi() {
           if (url.pathname === '/health' && request.method === 'GET') return send(response, 200, { status: 'ok' })
           if (url.pathname === '/api/v1/configs' && request.method === 'GET') return send(response, 200, {})
           if (url.pathname === '/api/v1/auth/anonymous' && request.method === 'POST') {
-            return send(response, 201, {
-              access_token: 'local-development-token', refresh_token: 'local-development-refresh', token_type: 'bearer',
-              access_expires_in: 86400, refresh_expires_in: 604800, resume_token: 'local-development-resume', username: devUser.username,
+            devUser.username = 'guest-local'
+            devUser.kind = 'anonymous'
+            return send(response, 201, { ...tokenPair(), resume_token: 'local-development-resume', username: devUser.username })
+          }
+          if (url.pathname === '/api/v1/auth/anonymous/resume' && request.method === 'POST') {
+            devUser.username = 'guest-local'
+            devUser.kind = 'anonymous'
+            return send(response, 200, tokenPair())
+          }
+          if (url.pathname === '/api/v1/auth/login' && request.method === 'POST') {
+            const body = await readBody(request)
+            if (!body.username || !body.password) return send(response, 401, null, 'Username and password are required.')
+            devUser.username = String(body.username)
+            devUser.kind = 'registered'
+            return send(response, 200, tokenPair())
+          }
+          if (url.pathname === '/api/v1/auth/register' && request.method === 'POST') {
+            const body = await readBody(request)
+            if (!body.username || !body.password || body.password !== body.confirm_password) {
+              return send(response, 422, null, 'Valid matching credentials are required.')
+            }
+            devUser.username = String(body.username)
+            devUser.kind = 'registered'
+            return send(response, 201, { ...tokenPair(), recovery_code: 'LOCAL-DEVELOPMENT-RECOVERY-CODE' })
+          }
+          if (url.pathname === '/api/v1/auth/recover' && request.method === 'POST') {
+            const body = await readBody(request)
+            if (!body.recovery_code || !body.password || body.password !== body.confirm_password) {
+              return send(response, 422, null, 'A recovery code and matching passwords are required.')
+            }
+            devUser.kind = 'registered'
+            return send(response, 200, {
+              ...tokenPair(), username: devUser.username, recovery_code: 'LOCAL-DEVELOPMENT-RECOVERY-CODE',
             })
           }
           if (url.pathname === '/api/v1/auth/me' && request.method === 'GET') return send(response, 200, devUser)
           if (url.pathname === '/api/v1/auth/refresh' && request.method === 'POST') {
-            return send(response, 200, { access_token: 'local-development-token', refresh_token: 'local-development-refresh', token_type: 'bearer', access_expires_in: 86400, refresh_expires_in: 604800 })
+            return send(response, 200, tokenPair())
           }
           if (url.pathname === '/api/v1/conversations' && request.method === 'GET') {
             const items = [...conversations.values()].map((conversation) => ({
