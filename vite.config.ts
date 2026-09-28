@@ -113,18 +113,36 @@ function localApi() {
             const id = typeof body.conversation_id === 'string' ? body.conversation_id : randomUUID()
             const now = new Date().toISOString()
             const guidance = {
-              conversation_id: id, status: 'refused', clarifying_questions: [], answer: null, citations: [], refused: true,
-              refusal_reason: 'no_authoritative_source',
-              disclaimer: 'The local development server has no legislation corpus. Connect the Lawful Compass API for source-backed answers.',
+              conversation_id: id,
+              status: 'answered',
+              clarifying_questions: [],
+              answer: {
+                summary: `Your question was received successfully: “${question}”`,
+                evidence_needed: [{
+                  text: 'Connect the deployed Lawful Compass API to retrieve authoritative Australian legislation and citations.',
+                  grounded: false,
+                  citations: [],
+                }],
+                checklist: [{
+                  text: 'Set VITE_API_BASE_URL to the deployed API URL when it becomes available.',
+                  grounded: false,
+                  citations: [],
+                }],
+                withheld_count: 0,
+              },
+              citations: [],
+              refused: false,
+              refusal_reason: null,
+              disclaimer: 'Local development connectivity is working. This message is not legal guidance.',
             }
             const conversation: DevConversation = conversations.get(id) || {
-              id, title: question.slice(0, 80), status: 'refused', last_activity_at: now, messages: [],
+              id, title: question.slice(0, 80), status: 'answered', last_activity_at: now, messages: [],
             }
             conversation.last_activity_at = now
-            conversation.status = 'refused'
+            conversation.status = 'answered'
             conversation.messages.push(
               { position: conversation.messages.length, role: 'user', text: question, refused: false, payload: null, created_at: now },
-              { position: conversation.messages.length + 1, role: 'assistant', text: 'No authoritative source is available in local development.', refused: true, payload: guidance, created_at: now },
+              { position: conversation.messages.length + 1, role: 'assistant', text: guidance.answer.summary, refused: false, payload: guidance, created_at: now },
             )
             conversations.set(id, conversation)
             return send(response, 200, guidance)
