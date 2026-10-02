@@ -3,7 +3,7 @@ import {
   AlertTriangle, ArrowUp, BookOpenText, Check, FileCheck2, FileText, Headphones,
   Info, LoaderCircle, Mic, Paperclip, Scale, ShieldAlert, Square, Trash2, Upload,
 } from 'lucide-react'
-import type { AttachmentUpload, Citation, GeneratedDocumentSummary, GuidanceResponse } from '../types/api'
+import type { AttachmentSummary, AttachmentUpload, Citation, GeneratedDocumentSummary, GuidanceResponse } from '../types/api'
 
 export interface ChatEntry {
   id: string
@@ -12,7 +12,7 @@ export interface ChatEntry {
   guidance?: GuidanceResponse
   pending?: boolean
   position?: number
-  attachments?: AttachmentUpload[]
+  attachments?: AttachmentSummary[]
   inputMode?: string | null
 }
 
