@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, ExternalLink, FileText, LoaderCircle, X } from 'lucide-react'
 import { api, errorMessage } from '../lib/api'
-import type { Citation, CitationDetail } from '../types/api'
+import type { AttachmentDetail, Citation, CitationDetail } from '../types/api'
 
 interface CitationDrawerProps {
   citation: Citation | null
@@ -11,6 +11,7 @@ interface CitationDrawerProps {
 
 export function CitationDrawer({ citation, onClose, onNavigate }: CitationDrawerProps) {
   const [detail, setDetail] = useState<CitationDetail | null>(null)
+  const [attachment, setAttachment] = useState<AttachmentDetail | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -18,10 +19,15 @@ export function CitationDrawer({ citation, onClose, onNavigate }: CitationDrawer
     if (!citation) return
     let active = true
     setDetail(null)
+    setAttachment(null)
     setError('')
     setLoading(true)
-    api.getCitation(citation.node_id)
-      .then((result) => { if (active) setDetail(result) })
+    const detailRequest = citation.kind === 'user_document' && citation.attachment_id
+      ? api.getAttachment(citation.attachment_id).then((result) => { if (active) setAttachment(result) })
+      : citation.node_id
+        ? api.getCitation(citation.node_id).then((result) => { if (active) setDetail(result) })
+        : Promise.reject(new Error('This source has no retrievable identifier.'))
+    detailRequest
       .catch((caught) => { if (active) setError(errorMessage(caught)) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
@@ -34,7 +40,7 @@ export function CitationDrawer({ citation, onClose, onNavigate }: CitationDrawer
       <button className="citation-scrim" onClick={onClose} aria-label="Close source" />
       <aside className="citation-drawer" aria-label="Legislation source">
         <header className="citation-header">
-          <div><span className="eyebrow">Primary source</span><h2>Source detail</h2></div>
+          <div><span className="eyebrow">{citation.kind === 'user_document' ? 'Your document' : 'Primary source'}</span><h2>Source detail</h2></div>
           <button className="icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </header>
         {loading && <div className="drawer-loading"><LoaderCircle className="spin" size={24} /> Retrieving source text…</div>}
@@ -63,6 +69,16 @@ export function CitationDrawer({ citation, onClose, onNavigate }: CitationDrawer
               <button disabled={!detail.previous_node_id} onClick={() => detail.previous_node_id && onNavigate(detail.previous_node_id)}><ArrowLeft size={16} /> Previous provision</button>
               <button disabled={!detail.next_node_id} onClick={() => detail.next_node_id && onNavigate(detail.next_node_id)}>Next provision <ArrowRight size={16} /></button>
             </div>
+          </div>
+        )}
+        {attachment && (
+          <div className="citation-content">
+            <span className="jurisdiction-pill">User-provided evidence</span>
+            <h3>{attachment.filename}</h3>
+            <p className="citation-name">{attachment.media_type} · {attachment.page_count} page{attachment.page_count === 1 ? '' : 's'}</p>
+            {citation.page && <p className="heading-path">Cited from page {citation.page}</p>}
+            <div className="source-text">{citation.snippet || attachment.extraction}</div>
+            <a className="official-link" href={attachment.url} target="_blank" rel="noreferrer">Open original document <ExternalLink size={15} /></a>
           </div>
         )}
       </aside>
