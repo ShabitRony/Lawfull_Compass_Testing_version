@@ -302,12 +302,14 @@ export default function App() {
         <header className="topbar">
           <div className="topbar-left"><MobileMenuButton onClick={() => setSidebarOpen(true)} /><div className="mobile-brand"><Brand /></div></div>
           <div className="service-state"><span /> Source-backed Australian law</div>
-          <button className="account-button" onClick={() => user?.kind !== 'registered' && setAuthOpen(true)}>
-            <UserRound size={16} />
-            {user?.kind === 'registered' ? user.username : 'Sign in to save'}
-            {user?.kind !== 'registered' && <LogIn size={15} />}
-          </button>
-          {activeId && <button className="icon-button feedback-trigger" onClick={() => setFeedbackOpen(true)} title="Share feedback"><MessageSquareHeart size={18} /></button>}
+          <div className="topbar-actions">
+            {activeId && <button className="icon-button feedback-trigger" onClick={() => setFeedbackOpen(true)} title="Share feedback"><MessageSquareHeart size={18} /></button>}
+            <button className="account-button" onClick={() => user?.kind !== 'registered' && setAuthOpen(true)}>
+              <UserRound size={16} />
+              {user?.kind === 'registered' ? user.username : 'Sign in to save'}
+              {user?.kind !== 'registered' && <LogIn size={15} />}
+            </button>
+          </div>
         </header>
 
         <div className={`content-scroll ${entries.length === 0 ? 'empty-content' : ''}`}>
