@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, LoaderCircle, LogIn, UserRound } from 'lucide-react'
+import { AlertCircle, LoaderCircle, LogIn, MessageSquareHeart, UserRound } from 'lucide-react'
 import { AuthDialog, type AuthMode, type AuthPayload } from './components/AuthDialog'
 import { Brand } from './components/Brand'
 import { CitationDrawer } from './components/CitationDrawer'
 import { Composer, Conversation, Welcome, type ChatEntry } from './components/Conversation'
 import { SecretDialog } from './components/SecretDialog'
 import { MobileMenuButton, Sidebar } from './components/Sidebar'
+import { DocumentDrawer, FeedbackDialog } from './components/WorkspaceDialogs'
 import { api, ApiError, errorMessage } from './lib/api'
 import { session } from './lib/session'
-import type { Citation, ConversationDetail, ConversationMessage, ConversationSummary, CurrentUser, GuidanceResponse } from './types/api'
+import type { AttachmentUpload, Citation, ConversationDetail, ConversationMessage, ConversationSummary, CurrentUser, GeneratedDocumentSummary, GuidanceResponse } from './types/api'
 
-function guidanceFromPayload(payload: Record<string, unknown> | null): GuidanceResponse | undefined {
+function guidanceFromPayload(payload: Record<string, unknown> | null, conversationId: string, position: number): GuidanceResponse | undefined {
   if (!payload) return undefined
   const candidate = (payload.guidance && typeof payload.guidance === 'object' ? payload.guidance : payload) as Partial<GuidanceResponse>
-  if (!candidate.conversation_id || !candidate.status || typeof candidate.refused !== 'boolean') return undefined
-  return candidate as GuidanceResponse
+  if (!candidate.status) return undefined
+  return { ...candidate, conversation_id: candidate.conversation_id || conversationId, message_position: candidate.message_position ?? position } as GuidanceResponse
 }
 
 function entriesFromConversation(conversation: ConversationDetail): ChatEntry[] {
@@ -22,8 +23,10 @@ function entriesFromConversation(conversation: ConversationDetail): ChatEntry[] 
     id: `${conversation.id}-${message.position}`,
     role: message.role === 'user' ? 'user' : 'assistant',
     text: message.text,
-    refused: message.refused,
-    guidance: guidanceFromPayload(message.payload),
+    position: message.position,
+    inputMode: message.input_mode,
+    attachments: message.attachments,
+    guidance: guidanceFromPayload(message.payload, conversation.id, message.position),
   }))
 }
 
@@ -32,6 +35,7 @@ export default function App() {
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeTitle, setActiveTitle] = useState<string | null>(null)
+  const [reviewed, setReviewed] = useState(false)
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [question, setQuestion] = useState('')
   const [initializing, setInitializing] = useState(true)
@@ -43,8 +47,16 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [selectedCitation, setSelectedCitation] = useState<Citation | null>(null)
   const [recoveryCode, setRecoveryCode] = useState<string | null>(null)
+  const [attachments, setAttachments] = useState<AttachmentUpload[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [inputMode, setInputMode] = useState<'text' | 'voice'>('text')
+  const [selectedDocument, setSelectedDocument] = useState<GeneratedDocumentSummary | null>(null)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const requestId = useRef(0)
   const endRef = useRef<HTMLDivElement>(null)
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   async function loadHistory() {
     setHistoryLoading(true)
@@ -104,6 +116,7 @@ export default function App() {
       const detail = await api.getConversation(id)
       if (currentRequest !== requestId.current) return
       setActiveTitle(detail.title)
+      setReviewed(detail.human_reviewed)
       setEntries(entriesFromConversation(detail))
     } catch (error) {
       if (currentRequest === requestId.current) setNotice(errorMessage(error))
@@ -117,7 +130,10 @@ export default function App() {
     setActiveId(null)
     setActiveTitle(null)
     setEntries([])
+    setReviewed(false)
     setQuestion('')
+    setAttachments([])
+    setInputMode('text')
     setNotice('')
     setSidebarOpen(false)
   }
@@ -128,16 +144,21 @@ export default function App() {
     setSubmitting(true)
     setQuestion('')
     setNotice('')
-    const userEntry: ChatEntry = { id: `user-${crypto.randomUUID()}`, role: 'user', text }
+    const sentAttachments = [...attachments]
+    const sentInputMode = inputMode
+    const userEntry: ChatEntry = { id: `user-${crypto.randomUUID()}`, role: 'user', text, attachments: sentAttachments, inputMode: sentInputMode }
     const pendingId = `pending-${crypto.randomUUID()}`
     setEntries((current) => [...current, userEntry, { id: pendingId, role: 'assistant', text: '', pending: true }])
 
     try {
-      const guidance = await api.postTurn(text, activeId)
+      const guidance = await api.postTurn(text, activeId, sentInputMode, sentAttachments.map((file) => file.id))
       setActiveId(guidance.conversation_id)
       setEntries((current) => current.map((entry) => entry.id === pendingId
-        ? { id: `assistant-${crypto.randomUUID()}`, role: 'assistant', text: guidance.answer?.summary || '', guidance, refused: guidance.refused }
+        ? { id: `assistant-${crypto.randomUUID()}`, role: 'assistant', text: guidance.answer?.summary || '', guidance, position: guidance.message_position }
         : entry))
+      setAttachments([])
+      setInputMode('text')
+      setReviewed(false)
       void loadHistory()
     } catch (error) {
       setEntries((current) => current.filter((entry) => entry.id !== pendingId && entry.id !== userEntry.id))
@@ -174,6 +195,7 @@ export default function App() {
   }
 
   async function signOut() {
+    try { if (session.refresh()) await api.logout() } catch { /* Local cleanup must always succeed. */ }
     session.clearAll()
     setUser(null)
     setConversations([])
@@ -192,6 +214,69 @@ export default function App() {
   function navigateCitation(nodeId: string) {
     if (!selectedCitation) return
     setSelectedCitation({ ...selectedCitation, node_id: nodeId })
+  }
+
+  async function uploadFiles(files: FileList) {
+    const available = Math.max(0, 5 - attachments.length)
+    const selected = Array.from(files).slice(0, available)
+    if (!selected.length) return
+    setUploading(true)
+    setNotice('')
+    try {
+      const uploaded = []
+      for (const file of selected) uploaded.push(await api.uploadAttachment(file))
+      setAttachments((current) => [...current, ...uploaded])
+    } catch (error) { setNotice(errorMessage(error)) }
+    finally { setUploading(false) }
+  }
+
+  async function removeAttachment(id: string) {
+    try {
+      await api.deleteAttachment(id)
+      setAttachments((current) => current.filter((file) => file.id !== id))
+    } catch (error) { setNotice(errorMessage(error)) }
+  }
+
+  async function toggleRecording() {
+    if (recording) { recorderRef.current?.stop(); return }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      audioChunksRef.current = []
+      recorder.ondataavailable = (event) => { if (event.data.size) audioChunksRef.current.push(event.data) }
+      recorder.onstop = () => {
+        setRecording(false)
+        stream.getTracks().forEach((track) => track.stop())
+        const audio = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' })
+        setSubmitting(true)
+        api.transcribe(audio)
+          .then((result) => { setQuestion(result.text); setInputMode('voice') })
+          .catch((error) => setNotice(errorMessage(error)))
+          .finally(() => setSubmitting(false))
+      }
+      recorderRef.current = recorder
+      recorder.start()
+      setRecording(true)
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Microphone access is unavailable.') }
+  }
+
+  async function updateChecklist(position: number, index: number, checked: boolean) {
+    const updateLocal = (value: boolean) => setEntries((current) => current.map((entry) => {
+      if (entry.position !== position || !entry.guidance?.answer?.checklist) return entry
+      return { ...entry, guidance: { ...entry.guidance, answer: { ...entry.guidance.answer, checklist: entry.guidance.answer.checklist.map((item, itemIndex) => itemIndex === index ? { ...item, checked: value } : item) } } }
+    }))
+    updateLocal(checked)
+    try { await api.updateChecklistItem(activeId!, position, index, checked) }
+    catch (error) { updateLocal(!checked); setNotice(errorMessage(error)) }
+  }
+
+  async function playSpeech(position: number) {
+    if (!activeId) return
+    try {
+      const speech = await api.getMessageSpeech(activeId, position)
+      const audio = new Audio(speech.url)
+      await audio.play()
+    } catch (error) { setNotice(errorMessage(error)) }
   }
 
   if (initializing) {
@@ -222,6 +307,7 @@ export default function App() {
             {user?.kind === 'registered' ? user.username : 'Sign in to save'}
             {user?.kind !== 'registered' && <LogIn size={15} />}
           </button>
+          {activeId && <button className="icon-button feedback-trigger" onClick={() => setFeedbackOpen(true)} title="Share feedback"><MessageSquareHeart size={18} /></button>}
         </header>
 
         <div className={`content-scroll ${entries.length === 0 ? 'empty-content' : ''}`}>
@@ -231,17 +317,19 @@ export default function App() {
           ) : entries.length === 0 ? (
             <Welcome onQuestion={(value) => void submitQuestion(value)} disabled={submitting} />
           ) : (
-            <Conversation entries={entries} selectedTitle={activeTitle} onCitation={setSelectedCitation} onClarification={(value) => void submitQuestion(value)} disabled={submitting} />
+            <Conversation entries={entries} selectedTitle={activeTitle} reviewed={reviewed} onCitation={setSelectedCitation} onClarification={(value) => void submitQuestion(value)} onChecklist={(position, index, checked) => void updateChecklist(position, index, checked)} onSpeech={(position) => void playSpeech(position)} onDocument={setSelectedDocument} disabled={submitting} />
           )}
           <div ref={endRef} />
         </div>
 
-        <Composer value={question} onChange={setQuestion} onSubmit={() => void submitQuestion()} disabled={submitting || conversationLoading} />
+        <Composer value={question} attachments={attachments} uploading={uploading} recording={recording} onChange={(value) => { setQuestion(value); if (inputMode === 'voice') setInputMode('text') }} onSubmit={() => void submitQuestion()} onFiles={(files) => void uploadFiles(files)} onRemoveAttachment={(id) => void removeAttachment(id)} onRecord={() => void toggleRecording()} disabled={submitting || conversationLoading} />
       </main>
 
       <AuthDialog open={authOpen} onClose={() => setAuthOpen(false)} onSubmit={authenticate} />
       <SecretDialog code={recoveryCode} onClose={() => setRecoveryCode(null)} />
       <CitationDrawer citation={selectedCitation} onClose={() => setSelectedCitation(null)} onNavigate={navigateCitation} />
+      <DocumentDrawer document={selectedDocument} onClose={() => setSelectedDocument(null)} onDeleted={() => setSelectedDocument(null)} />
+      <FeedbackDialog open={feedbackOpen} conversationId={activeId} onClose={() => setFeedbackOpen(false)} />
     </div>
   )
 }
