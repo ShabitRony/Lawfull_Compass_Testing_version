@@ -223,7 +223,7 @@ export default function App() {
     setUploading(true)
     setNotice('')
     try {
-      const uploaded = []
+      const uploaded: AttachmentUpload[] = []
       for (const file of selected) uploaded.push(await api.uploadAttachment(file))
       setAttachments((current) => [...current, ...uploaded])
     } catch (error) { setNotice(errorMessage(error)) }
