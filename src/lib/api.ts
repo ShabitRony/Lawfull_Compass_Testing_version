@@ -24,7 +24,7 @@ import type {
   TranscriptionPayload,
 } from '../types/api'
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '')
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 export class ApiError extends Error {
   constructor(
@@ -158,6 +158,6 @@ export const api = {
 
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message
-  if (error instanceof TypeError) return `Cannot reach the Lawful Compass service at ${API_BASE_URL}.`
+  if (error instanceof TypeError) return 'Cannot reach the Lawful Compass service. Please try again.'
   return 'Something went wrong. Please try again.'
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, CircleHelp, LoaderCircle, LogIn, Sparkles, UserRound, X } from 'lucide-react'
+import { AlertCircle, CircleHelp, LoaderCircle, LogIn, LogOut, Sparkles, UserRound, X } from 'lucide-react'
 import { AuthDialog, type AuthMode, type AuthPayload } from './components/AuthDialog'
 import { Brand } from './components/Brand'
 import { CitationDrawer } from './components/CitationDrawer'
@@ -129,6 +129,7 @@ export default function App() {
   async function selectConversation(id: string) {
     const currentRequest = ++requestId.current
     setSidebarOpen(false)
+    setConversationLoading(false)
     setActiveId(id)
     setConversationLoading(true)
     setNotice('')
@@ -156,6 +157,10 @@ export default function App() {
     setInputMode('text')
     setNotice('')
     setSidebarOpen(false)
+    setConversationLoading(false)
+    setSelectedCitation(null)
+    setSelectedDocument(null)
+    setFeedbackOpen(false)
   }
 
   async function submitQuestion(prefilled?: string) {
@@ -206,22 +211,25 @@ export default function App() {
       session.setResume(payload.resumeToken!)
     }
 
+    setRecoveryCode(code)
     const current = await api.me()
     setUser(current)
     setAuthOpen(false)
-    setRecoveryCode(code)
     newQuestion()
     await loadHistory()
   }
 
   async function signOut() {
-    try { if (session.refresh()) await api.logout() } catch { /* Local cleanup must always succeed. */ }
+    const logoutRequest = session.refresh() ? api.logout().catch(() => null) : Promise.resolve(null)
     session.clearAll()
     setUser(null)
     setConversations([])
     newQuestion()
+    setRecoveryCode(null)
+    setAuthOpen(true)
     setInitializing(true)
     try {
+      await logoutRequest
       await establishAnonymous()
       await loadHistory()
     } catch (error) {
@@ -333,10 +341,10 @@ export default function App() {
             <button className="reading-button" title="Reading comfort" onClick={() => setReadingOpen(true)}>A<span>A</span></button>
             <button className="urgent-button" onClick={() => setUrgentOpen(true)}><CircleHelp size={14} /> Urgent Help</button>
             <button className="upgrade-button" onClick={() => setUpgradeOpen(true)}><Sparkles size={15} /> Upgrade</button>
-            <button className="account-button" onClick={() => user?.kind !== 'registered' && setAuthOpen(true)}>
+            <button className="account-button" title={user?.kind === 'registered' ? `Sign out ${user.username}` : 'Sign in'} aria-label={user?.kind === 'registered' ? 'Sign out' : 'Sign in'} onClick={() => user?.kind === 'registered' ? void signOut() : setAuthOpen(true)}>
               <UserRound size={16} />
               {user?.kind === 'registered' ? user.username : 'Sign in to save'}
-              {user?.kind !== 'registered' && <LogIn size={15} />}
+              {user?.kind === 'registered' ? <LogOut size={15} /> : <LogIn size={15} />}
             </button>
           </div>
         </header>

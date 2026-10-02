@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { ArrowLeft, KeyRound, LoaderCircle, ShieldCheck, X } from 'lucide-react'
-import { ApiError } from '../lib/api'
+import { ApiError, errorMessage } from '../lib/api'
 
 export type AuthMode = 'login' | 'register' | 'recover' | 'resume'
 
@@ -41,8 +41,15 @@ export function AuthDialog({ open, onClose, onSubmit }: AuthDialogProps) {
 
   if (!open) return null
 
+  function changeMode(next: AuthMode) {
+    setMode(next)
+    setError('')
+    setFields({})
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (busy) return
     const form = new FormData(event.currentTarget)
     const payload: AuthPayload = {
       username: String(form.get('username') || '').trim(),
@@ -65,7 +72,7 @@ export function AuthDialog({ open, onClose, onSubmit }: AuthDialogProps) {
         setError(caught.message)
         setFields(caught.fields || {})
       } else {
-        setError('Unable to complete this request. Please try again.')
+        setError(errorMessage(caught))
       }
     } finally {
       setBusy(false)
@@ -78,13 +85,13 @@ export function AuthDialog({ open, onClose, onSubmit }: AuthDialogProps) {
     <div className="dialog-layer auth-layer" role="presentation">
       <button className="dialog-backdrop" onClick={onClose} aria-label="Close dialog" />
       <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <button className="dialog-close icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button>
+        <button className="dialog-close icon-button" disabled={busy} onClick={onClose} aria-label="Close"><X size={20} /></button>
         <div className="auth-symbol"><ShieldCheck size={27} /></div>
         <p className="eyebrow">Your private workspace</p>
         <h2 id="auth-title">{modeCopy[mode].title}</h2>
         <p className="auth-intro">{modeCopy[mode].intro}</p>
 
-        <form onSubmit={submit} className="auth-form">
+        <form key={mode} onSubmit={submit} className="auth-form">
           {(mode === 'login' || mode === 'register') && (
             <label>Username
               <input name="username" autoComplete="username" required minLength={1} maxLength={255} aria-invalid={Boolean(inputError('username'))} />
@@ -105,7 +112,7 @@ export function AuthDialog({ open, onClose, onSubmit }: AuthDialogProps) {
           )}
           {mode !== 'resume' && (
             <label>{mode === 'login' ? 'Password' : 'New password'}
-              <input name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required maxLength={128} aria-invalid={Boolean(inputError('password'))} />
+              <input name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'login' ? 1 : 8} maxLength={128} aria-invalid={Boolean(inputError('password'))} />
               {inputError('password') && <span className="field-error">{inputError('password')}</span>}
             </label>
           )}
@@ -127,12 +134,13 @@ export function AuthDialog({ open, onClose, onSubmit }: AuthDialogProps) {
 
         {mode === 'login' ? (
           <div className="auth-options">
-            <button onClick={() => setMode('register')}>Create an account</button>
-            <button onClick={() => setMode('recover')}>Use recovery code</button>
-            <button onClick={() => setMode('resume')}><KeyRound size={14} /> Resume guest session</button>
+            <button disabled={busy} onClick={() => changeMode('register')}>Create an account</button>
+            <button disabled={busy} onClick={() => changeMode('recover')}>Use recovery code</button>
+            <button disabled={busy} onClick={() => changeMode('resume')}><KeyRound size={14} /> Resume guest session</button>
+            <button disabled={busy} onClick={onClose}>Continue as guest</button>
           </div>
         ) : (
-          <button className="back-link" onClick={() => { setMode('login'); setError(''); setFields({}) }}><ArrowLeft size={15} /> Back to sign in</button>
+          <button disabled={busy} className="back-link" onClick={() => changeMode('login')}><ArrowLeft size={15} /> Back to sign in</button>
         )}
       </section>
     </div>
