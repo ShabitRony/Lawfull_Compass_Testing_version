@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, LoaderCircle, LogIn, MessageSquareHeart, UserRound } from 'lucide-react'
+import { AlertCircle, CircleHelp, LoaderCircle, LogIn, Sparkles, UserRound } from 'lucide-react'
 import { AuthDialog, type AuthMode, type AuthPayload } from './components/AuthDialog'
 import { Brand } from './components/Brand'
 import { CitationDrawer } from './components/CitationDrawer'
 import { Composer, Conversation, Welcome, type ChatEntry } from './components/Conversation'
 import { SecretDialog } from './components/SecretDialog'
 import { MobileMenuButton, Sidebar } from './components/Sidebar'
+import { MatterRail } from './components/MatterRail'
 import { DocumentDrawer, FeedbackDialog } from './components/WorkspaceDialogs'
 import { api, ApiError, errorMessage } from './lib/api'
 import { session } from './lib/session'
@@ -283,6 +284,12 @@ export default function App() {
     return <main className="startup"><Brand /><LoaderCircle className="spin" size={26} /><p>Preparing your private legal workspace…</p></main>
   }
 
+  const latestGuidance = [...entries].reverse().find((entry) => entry.guidance)?.guidance
+  const railChecklist = latestGuidance?.answer?.checklist || []
+  const railAttachments = entries.flatMap((entry) => entry.attachments || [])
+  const railDocuments = entries.flatMap((entry) => entry.guidance?.document ? [entry.guidance.document] : [])
+  const activeTag = conversations.find((conversation) => conversation.id === activeId)?.tag || null
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -296,14 +303,17 @@ export default function App() {
         onSelect={(id) => void selectConversation(id)}
         onAuth={() => setAuthOpen(true)}
         onSignOut={() => void signOut()}
+        onFeedback={() => setFeedbackOpen(true)}
       />
 
       <main className="workspace">
         <header className="topbar">
           <div className="topbar-left"><MobileMenuButton onClick={() => setSidebarOpen(true)} /><div className="mobile-brand"><Brand /></div></div>
-          <div className="service-state"><span /> Source-backed Australian law</div>
+          <div className="matter-title"><strong>{activeTitle || 'New Matter'}</strong><small>{activeId ? 'Your saved legal matter' : 'Tell us what happened'}</small></div>
           <div className="topbar-actions">
-            {activeId && <button className="icon-button feedback-trigger" onClick={() => setFeedbackOpen(true)} title="Share feedback"><MessageSquareHeart size={18} /></button>}
+            <button className="reading-button" title="Reading comfort">A<span>A</span></button>
+            <button className="urgent-button"><CircleHelp size={14} /> Urgent Help</button>
+            <button className="upgrade-button"><Sparkles size={15} /> Upgrade</button>
             <button className="account-button" onClick={() => user?.kind !== 'registered' && setAuthOpen(true)}>
               <UserRound size={16} />
               {user?.kind === 'registered' ? user.username : 'Sign in to save'}
@@ -326,6 +336,9 @@ export default function App() {
 
         <Composer value={question} attachments={attachments} uploading={uploading} recording={recording} onChange={(value) => { setQuestion(value); if (inputMode === 'voice') setInputMode('text') }} onSubmit={() => void submitQuestion()} onFiles={(files) => void uploadFiles(files)} onRemoveAttachment={(id) => void removeAttachment(id)} onRecord={() => void toggleRecording()} disabled={submitting || conversationLoading} />
       </main>
+
+      <MatterRail checklist={railChecklist} attachments={railAttachments} tag={activeTag} documents={railDocuments} onDocument={setSelectedDocument} />
+      <footer className="legal-footer">Educational lawful guidance only, not legal advice.</footer>
 
       <AuthDialog open={authOpen} onClose={() => setAuthOpen(false)} onSubmit={authenticate} />
       <SecretDialog code={recoveryCode} onClose={() => setRecoveryCode(null)} />

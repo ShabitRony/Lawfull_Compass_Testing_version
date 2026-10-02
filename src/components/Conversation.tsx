@@ -29,26 +29,26 @@ interface ConversationProps {
 }
 
 const starterQuestions = [
-  'What can I do about a traffic camera fine?',
-  'Can I request more time to pay an infringement?',
-  'How do I nominate another driver for a fine?',
+  'My landlord is trying to evict me.',
+  'I was dismissed and I think it was unfair.',
+  'A shop refuses to refund a faulty product.',
+  "My employer hasn't paid me for three weeks.",
 ]
 
 export function Welcome({ onQuestion, disabled }: { onQuestion: (question: string) => void; disabled: boolean }) {
   return (
     <section className="welcome">
-      <div className="welcome-emblem"><Scale size={31} strokeWidth={1.5} /></div>
-      <p className="eyebrow">Australian law, made clearer</p>
-      <h1>Find your bearings<br />in the law.</h1>
-      <p className="welcome-copy">Ask a question in plain English. Add a notice or document when its details matter, and receive source-backed guidance.</p>
+      <div className="welcome-emblem"><Scale size={27} strokeWidth={1.5} /></div>
+      <h1>How can I help you today?</h1>
+      <p className="welcome-copy">Describe what happened. Lawful Compass will guide you and explain it for you.</p>
       <div className="starter-grid">
         {starterQuestions.map((question, index) => (
           <button key={question} disabled={disabled} onClick={() => onQuestion(question)}>
-            <span>0{index + 1}</span>{question}<ArrowUp size={16} />
+            <span>{index + 1}</span>{question}<ArrowUp size={16} />
           </button>
         ))}
       </div>
-      <div className="trust-line"><ShieldAlert size={15} /> General legal information, not legal advice. For urgent matters, speak to a qualified lawyer.</div>
+      <div className="trust-line"><ShieldAlert size={15} /> General legal information, not legal advice.</div>
     </section>
   )
 }
@@ -212,7 +212,7 @@ export function Composer({ value, attachments, uploading, recording, onChange, o
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); onSubmit() } }}
-          placeholder="Ask about Australian law or legislation…"
+          placeholder="Describe what happened...."
           maxLength={2000}
           rows={1}
           disabled={disabled}

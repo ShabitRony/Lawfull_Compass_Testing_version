@@ -1,4 +1,4 @@
-import { Clock3, LogIn, LogOut, Menu, MessageSquareText, Plus, UserRound, X } from 'lucide-react'
+import { Clock3, LifeBuoy, LogIn, LogOut, Menu, MessageSquareText, Plus, UserRound, X } from 'lucide-react'
 import type { ConversationSummary, CurrentUser } from '../types/api'
 import { Brand } from './Brand'
 
@@ -13,6 +13,7 @@ interface SidebarProps {
   onSelect: (id: string) => void
   onAuth: () => void
   onSignOut: () => void
+  onFeedback: () => void
 }
 
 function relativeDate(value: string) {
@@ -23,7 +24,7 @@ function relativeDate(value: string) {
   return new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short' }).format(date)
 }
 
-export function Sidebar({ conversations, activeId, loading, open, user, onClose, onNew, onSelect, onAuth, onSignOut }: SidebarProps) {
+export function Sidebar({ conversations, activeId, loading, open, user, onClose, onNew, onSelect, onAuth, onSignOut, onFeedback }: SidebarProps) {
   return (
     <>
       {open && <button className="sidebar-scrim" aria-label="Close conversation menu" onClick={onClose} />}
@@ -57,6 +58,11 @@ export function Sidebar({ conversations, activeId, loading, open, user, onClose,
             </button>
           ))}
         </nav>
+
+        <div className="sidebar-help">
+          <button onClick={onFeedback}><MessageSquareText size={16} /> Give Feedback Here</button>
+          <div><strong>Support is open until 4pm</strong><p>A person can help you use this site. They cannot give legal advice.</p><button><LifeBuoy size={14} /> Ask for help</button></div>
+        </div>
 
         <div className="sidebar-account">
           <div className="account-avatar"><UserRound size={17} /></div>
