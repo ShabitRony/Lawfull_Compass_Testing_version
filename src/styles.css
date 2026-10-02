@@ -212,7 +212,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visib
   cursor: pointer;
 }
 .account-button:hover { background: var(--forest-light); }
-.feedback-trigger { margin-left: -22px; color: #49675f; }
+.topbar-actions { display: flex; align-items: center; gap: 2px; }
+.feedback-trigger { color: #49675f; }
 
 /* Main welcome and conversation */
 .content-scroll { min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 36px 32px 24px; }
