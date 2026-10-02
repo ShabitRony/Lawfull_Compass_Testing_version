@@ -24,7 +24,8 @@ import type {
   TranscriptionPayload,
 } from '../types/api'
 
-const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+// Vite and Vercel forward same-origin API requests to the backend.
+const API_BASE_URL = ''
 
 export class ApiError extends Error {
   constructor(
