@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, CircleHelp, LoaderCircle, LogIn, Sparkles, UserRound } from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { AlertCircle, CircleHelp, LoaderCircle, LogIn, Sparkles, UserRound, X } from 'lucide-react'
 import { AuthDialog, type AuthMode, type AuthPayload } from './components/AuthDialog'
 import { Brand } from './components/Brand'
 import { CitationDrawer } from './components/CitationDrawer'
@@ -31,6 +31,21 @@ function entriesFromConversation(conversation: ConversationDetail): ChatEntry[] 
   }))
 }
 
+function HeaderDialog({ title, open, onClose, children }: { title: string; open: boolean; onClose: () => void; children: ReactNode }) {
+  if (!open) return null
+  return (
+    <div className="dialog-layer" role="presentation">
+      <button className="dialog-backdrop" onClick={onClose} aria-label={`Close ${title}`} />
+      <section className="header-dialog" role="dialog" aria-modal="true" aria-label={title}>
+        <button className="dialog-close icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button>
+        <div className="header-dialog-icon"><Sparkles size={22} /></div>
+        <h2>{title}</h2>
+        {children}
+      </section>
+    </div>
+  )
+}
+
 export default function App() {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
@@ -54,6 +69,10 @@ export default function App() {
   const [inputMode, setInputMode] = useState<'text' | 'voice'>('text')
   const [selectedDocument, setSelectedDocument] = useState<GeneratedDocumentSummary | null>(null)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [urgentOpen, setUrgentOpen] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [readingOpen, setReadingOpen] = useState(false)
+  const [readingSize, setReadingSize] = useState<'standard' | 'large' | 'largest'>('standard')
   const requestId = useRef(0)
   const endRef = useRef<HTMLDivElement>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -291,7 +310,7 @@ export default function App() {
   const activeTag = conversations.find((conversation) => conversation.id === activeId)?.tag || null
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell reading-${readingSize}`}>
       <Sidebar
         conversations={conversations}
         activeId={activeId}
@@ -311,9 +330,9 @@ export default function App() {
           <div className="topbar-left"><MobileMenuButton onClick={() => setSidebarOpen(true)} /><div className="mobile-brand"><Brand /></div></div>
           <div className="matter-title"><strong>{activeTitle || 'New Matter'}</strong><small>{activeId ? 'Your saved legal matter' : 'Tell us what happened'}</small></div>
           <div className="topbar-actions">
-            <button className="reading-button" title="Reading comfort">A<span>A</span></button>
-            <button className="urgent-button"><CircleHelp size={14} /> Urgent Help</button>
-            <button className="upgrade-button"><Sparkles size={15} /> Upgrade</button>
+            <button className="reading-button" title="Reading comfort" onClick={() => setReadingOpen(true)}>A<span>A</span></button>
+            <button className="urgent-button" onClick={() => setUrgentOpen(true)}><CircleHelp size={14} /> Urgent Help</button>
+            <button className="upgrade-button" onClick={() => setUpgradeOpen(true)}><Sparkles size={15} /> Upgrade</button>
             <button className="account-button" onClick={() => user?.kind !== 'registered' && setAuthOpen(true)}>
               <UserRound size={16} />
               {user?.kind === 'registered' ? user.username : 'Sign in to save'}
@@ -345,6 +364,23 @@ export default function App() {
       <CitationDrawer citation={selectedCitation} onClose={() => setSelectedCitation(null)} onNavigate={navigateCitation} />
       <DocumentDrawer document={selectedDocument} onClose={() => setSelectedDocument(null)} onDeleted={() => setSelectedDocument(null)} />
       <FeedbackDialog open={feedbackOpen} conversationId={activeId} onClose={() => setFeedbackOpen(false)} />
+      <HeaderDialog title="Reading comfort" open={readingOpen} onClose={() => setReadingOpen(false)}>
+        <p>Choose the text size that is most comfortable for you.</p>
+        <div className="reading-options">
+          {(['standard', 'large', 'largest'] as const).map((size, index) => <button className={readingSize === size ? 'active' : ''} key={size} onClick={() => setReadingSize(size)}>A<span>{index === 0 ? 'Standard' : index === 1 ? 'Large' : 'Largest'}</span></button>)}
+        </div>
+        <button className="primary-button dialog-primary" onClick={() => setReadingOpen(false)}>Apply</button>
+      </HeaderDialog>
+      <HeaderDialog title="Need urgent help?" open={urgentOpen} onClose={() => setUrgentOpen(false)}>
+        <p>Lawful Compass cannot provide emergency assistance or legal representation.</p>
+        <div className="urgent-copy"><strong>If anyone is in immediate danger, call 000.</strong><span>For urgent legal help, contact your state or territory Legal Aid service or a qualified lawyer.</span></div>
+        <button className="primary-button dialog-primary" onClick={() => setUrgentOpen(false)}>I understand</button>
+      </HeaderDialog>
+      <HeaderDialog title="Upgrade Lawful Compass" open={upgradeOpen} onClose={() => setUpgradeOpen(false)}>
+        <p>Unlock additional saved documents and matter tools when subscriptions become available.</p>
+        <div className="upgrade-card"><Sparkles size={20} /><div><strong>More tools, same clear guidance</strong><span>Subscription checkout is not available in the current service yet.</span></div></div>
+        <button className="primary-button dialog-primary" onClick={() => setUpgradeOpen(false)}>Continue with free access</button>
+      </HeaderDialog>
     </div>
   )
 }

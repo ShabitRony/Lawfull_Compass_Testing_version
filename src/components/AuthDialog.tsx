@@ -75,7 +75,7 @@ export function AuthDialog({ open, onClose, onSubmit }: AuthDialogProps) {
   const inputError = (name: string) => fields[name] || fields[name.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)]
 
   return (
-    <div className="dialog-layer" role="presentation">
+    <div className="dialog-layer auth-layer" role="presentation">
       <button className="dialog-backdrop" onClick={onClose} aria-label="Close dialog" />
       <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <button className="dialog-close icon-button" onClick={onClose} aria-label="Close"><X size={20} /></button>
