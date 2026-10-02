@@ -137,7 +137,7 @@ function Guidance({ value, position, onCitation, onClarification, onChecklist, o
         </section>
       )}
       {value.document && (
-        <button className={`document-card ${value.document.grounded ? '' : 'ungrounded'}`} onClick={() => onDocument(value.document)}>
+        <button className={`document-card ${value.document.grounded ? '' : 'ungrounded'}`} onClick={() => onDocument(value.document!)}>
           <FileText size={22} />
           <span><small>Drafted document</small><strong>{value.document.title}</strong></span>
           <ArrowUp size={17} />
