@@ -15,6 +15,7 @@ export function DocumentDrawer({ document, onClose, onDeleted }: {
   useEffect(() => {
     if (!document) return
     let active = true
+    setDetail(null)
     setLoading(true)
     setError('')
     api.getDocument(document.id)
@@ -68,6 +69,14 @@ export function FeedbackDialog({ open, conversationId, onClose }: { open: boolea
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setRating(0)
+    setError('')
+    setSent(false)
+  }, [open])
+
   if (!open) return null
 
   async function submit(event: FormEvent<HTMLFormElement>) {
